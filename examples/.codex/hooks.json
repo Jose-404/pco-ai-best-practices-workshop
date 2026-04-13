@@ -1,0 +1,22 @@
+{
+  "hooks": [
+    {
+      "event": "pre-tool-call",
+      "command": ".codex/hooks/safety-check.sh",
+      "description": "Valida comandos destructivos antes de ejecución",
+      "timeout_ms": 5000
+    },
+    {
+      "event": "session-start",
+      "command": ".codex/hooks/verify-environment.sh",
+      "description": "Verifica cuenta AWS y contexto al iniciar sesión",
+      "timeout_ms": 10000
+    },
+    {
+      "event": "post-tool-call",
+      "command": ".codex/hooks/audit-log.sh",
+      "description": "Registra cada acción en log de auditoría",
+      "timeout_ms": 3000
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+# agents/openai.yaml — Registro de Skills para Codex
+# Codex lee este archivo para descubrir skills disponibles.
+# Solo carga el SKILL.md completo cuando decide usar un skill (progressive disclosure).
+
+skills:
+  - name: aws-sg-audit
+    description: >
+      Audita Security Groups de AWS buscando reglas demasiado
+      permisivas (0.0.0.0/0, puertos críticos abiertos) y genera
+      un reporte de seguridad.
+    path: skills/aws-sg-audit/SKILL.md
+
+  - name: terraform-safety
+    description: >
+      Valida planes de Terraform detectando cambios destructivos,
+      recursos de producción afectados y cambios en IAM policies
+      antes del apply.
+    path: skills/terraform-safety/SKILL.md
+
+  - name: incident-response
+    description: >
+      Runbook de respuesta a incidentes en AWS. Guía el diagnóstico,
+      recolección de evidencia, mitigación y documentación post-mortem.
+    path: skills/incident-response/SKILL.md
