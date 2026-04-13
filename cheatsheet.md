@@ -23,6 +23,7 @@
 codex --approval-mode suggest     # Pide aprobación para TODO (recomendado infra)
 codex --approval-mode auto-edit   # Auto-edita archivos, pide aprobación para shell
 codex --approval-mode full-auto   # Todo automático (NUNCA en producción)
+codex --yolo  # No pide aprobación
 ```
 
 ## Copiar Configuración a un Proyecto Nuevo
