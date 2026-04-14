@@ -9,56 +9,66 @@ description: Audita Security Groups de AWS buscando reglas demasiado permisivas 
 Cuando el usuario pida revisar, auditar o validar Security Groups,
 o cuando se detecte la creación de reglas de ingress demasiado permisivas.
 
+## Archivos disponibles
+
+```
+skills/aws-sg-audit/
+├── SKILL.md                        # Este archivo
+├── scripts/
+│   └── audit-security-groups.sh   # Script principal de auditoría
+└── templates/
+    └── sg-report.md                # Plantilla para el reporte final
+```
+
 ## Procedimiento
 
-### Paso 1: Obtener Security Groups
+### Paso 1: Ejecutar el script de auditoría
+
+El script se encarga de conectarse a AWS, analizar todos los Security Groups
+y clasificar los hallazgos por severidad.
+
 ```bash
-aws ec2 describe-security-groups --output json > /tmp/sg-audit.json
+# Auditoría básica (salida en terminal)
+bash skills/aws-sg-audit/scripts/audit-security-groups.sh
+
+# Especificando región y perfil AWS
+bash skills/aws-sg-audit/scripts/audit-security-groups.sh \
+  --region us-east-1 \
+  --profile staging
+
+# Generando reporte markdown
+bash skills/aws-sg-audit/scripts/audit-security-groups.sh \
+  --region us-east-1 \
+  --output /tmp/sg-report.md
 ```
 
-### Paso 2: Analizar reglas peligrosas
-Para cada Security Group, verificar:
-- Reglas de ingress con source `0.0.0.0/0` o `::/0`
-- Puertos que NUNCA deben estar abiertos al público:
-  - 22 (SSH)
-  - 3389 (RDP)
-  - 3306 (MySQL)
-  - 5432 (PostgreSQL)
-  - 6379 (Redis)
-  - 27017 (MongoDB)
-  - 9200/9300 (Elasticsearch)
-  - 11211 (Memcached)
-- Reglas con rango de puertos demasiado amplio (ej: 0-65535)
-- Security Groups sin uso (no asociados a ninguna ENI)
+### Paso 2: Revisar hallazgos con el usuario
 
-### Paso 3: Clasificar severidad
+El script clasifica automáticamente los hallazgos:
+
 | Nivel | Criterio |
 |-------|----------|
-| CRITICO | Puerto de base de datos abierto a 0.0.0.0/0 |
-| ALTO | SSH/RDP abierto a 0.0.0.0/0 |
-| MEDIO | Rango amplio de puertos abierto a 0.0.0.0/0 |
-| BAJO | Security Group sin uso |
+| CRITICO | Base de datos (MySQL, Postgres, Redis, etc.) abierta a `0.0.0.0/0` |
+| ALTO | SSH (22) o RDP (3389) abierto a `0.0.0.0/0` |
+| MEDIO | Rango de más de 100 puertos abierto a `0.0.0.0/0` |
+| BAJO | Security Group sin uso (no asociado a ninguna ENI) |
 
-### Paso 4: Generar reporte
-Formato del reporte:
-```
-## Reporte de Auditoría - Security Groups
-Fecha: [timestamp]
-Cuenta: [account-id]
-Región: [region]
+### Paso 3: Generar reporte formal
 
-### Hallazgos Críticos
-- SG: [sg-id] ([nombre])
-  - Puerto [X] abierto a 0.0.0.0/0
-  - Asociado a: [recurso]
-  - Recomendación: [acción]
+Si el usuario pide un reporte, usar la plantilla en `templates/sg-report.md`
+y completarla con los hallazgos del script. El propio script puede generarlo
+directamente con `--output`.
 
-### Resumen
-- Total SGs analizados: X
-- Críticos: X | Altos: X | Medios: X | Bajos: X
-```
+### Paso 4: Recomendar remediación
+
+Para cada hallazgo, sugerir:
+- **CRITICO:** Restringir a IP interna o eliminar regla inmediatamente
+- **ALTO:** Usar bastion host o VPN para SSH/RDP, nunca exposición directa
+- **MEDIO:** Revisar si el rango amplio es necesario y reducirlo
+- **BAJO:** Eliminar el Security Group si no está en uso
 
 ## Restricciones
-- Este skill es de SOLO LECTURA. NUNCA modificar Security Groups.
-- Si se encuentra algo crítico, notificar inmediatamente al usuario.
-- No asumir que un puerto abierto es "intencionado" — siempre reportar.
+- Este skill es de **SOLO LECTURA**. Nunca modificar Security Groups.
+- Si se encuentran hallazgos críticos, notificar inmediatamente al usuario.
+- No asumir que un puerto abierto es "intencional" — siempre reportar.
+- Verificar siempre la cuenta y región AWS antes de ejecutar.

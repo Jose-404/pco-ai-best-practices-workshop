@@ -6,121 +6,82 @@
 
 ## El Panorama: Múltiples Modelos, Un Solo IDE
 
-Con GitHub Copilot Business/Pro+/Enterprise en VSCode, ya no estás limitado a un solo modelo. Puedes alternar entre:
+Con GitHub Copilot Business/Pro+/Enterprise en VSCode, puedes alternar entre:
 
 - **GPT-5.3-Codex** (OpenAI) — el que hemos configurado en este taller
 - **Claude Sonnet 4.6** (Anthropic) — rápido, excelente para código y revisiones
 - **Claude Opus 4.6** (Anthropic) — máxima capacidad de razonamiento
-- **Gemini** (Google) — opción adicional
+- **Gemini** (Google) — opción adicional disponible
 
 La buena noticia: **las configuraciones de instrucciones y MCPs funcionan con todos los modelos**. El gobierno que establezcas aplica independientemente del modelo que elija cada miembro del equipo.
 
-## Selección de Modelo en VSCode
+---
 
-En el panel de Copilot Chat, el model picker está disponible en la esquina del input:
+## Paso 1: Verificar que tienes GitHub Copilot activo en VSCode
 
+Antes de cualquier configuración, confirma que la extensión está instalada y autenticada:
+
+1. Abre VSCode
+2. Ve a **Extensions** (`Cmd+Shift+X` / `Ctrl+Shift+X`)
+3. Busca `GitHub Copilot` — debe aparecer como instalada y activa
+4. En la barra inferior de VSCode debes ver el ícono de Copilot (✓ o la animación)
+
+Si no está instalada:
 ```
-┌──────────────────────────────────────────┐
-│  Copilot Chat                            │
-│                                          │
-│  ┌────────────────────────────────────┐  │
-│  │ Escribe tu mensaje...              │  │
-│  │                            [⚙️ GPT] │  │ ← Click aquí para cambiar modelo
-│  └────────────────────────────────────┘  │
-│                                          │
-│  Modelos disponibles:                    │
-│  ☑ GPT-5.3-Codex                        │
-│  ○ Claude Sonnet 4.6                    │
-│  ○ Claude Opus 4.6                      │
-│  ○ Gemini                               │
-└──────────────────────────────────────────┘
+Extensions → Buscar "GitHub Copilot" → Install
 ```
+Luego autentícate con tu cuenta de GitHub cuando te lo pida.
 
-Para habilitar Claude como agente en Copilot:
+---
+
+## Paso 2: Habilitar Claude en Copilot
+
+Claude no viene habilitado por defecto como agente en Copilot. Hay que activarlo explícitamente.
+
+### Opción A: Desde la UI (recomendado para la primera vez)
+
+1. Abre el panel de Copilot Chat con `Cmd+Ctrl+I` (Mac) o `Ctrl+Alt+I` (Windows/Linux)
+2. En el selector de modelo (esquina inferior del chat), haz clic en el nombre del modelo actual
+3. Si ves `Claude Sonnet 4.6` o `Claude Opus 4.6` en la lista, ya está disponible — selecciónalo
+4. Si no aparece, continúa con la Opción B
+
+### Opción B: Via settings.json
+
+Abre tu `settings.json` de usuario en VSCode:
+
+1. `Cmd+Shift+P` (Mac) / `Ctrl+Shift+P` (Windows/Linux)
+2. Escribe: `Preferences: Open User Settings (JSON)`
+3. Se abre el archivo `settings.json` de tu usuario
+4. Agrega esta línea dentro del objeto JSON:
 
 ```json
-// settings.json de VSCode
 {
     "github.copilot.chat.claudeAgent.enabled": true
 }
 ```
 
-## Sistema de Instrucciones en VSCode: Arquitectura Unificada
+> **¿Dónde queda este archivo?**
+> - macOS: `~/Library/Application Support/Code/User/settings.json`
+> - Windows: `%APPDATA%\Code\User\settings.json`
+> - Linux: `~/.config/Code/User/settings.json`
 
-VSCode/Copilot soporta múltiples archivos de instrucciones que funcionan con **todos** los modelos:
-
-```
-tu-proyecto/
-├── .github/
-│   ├── copilot-instructions.md              # Instrucciones globales del proyecto
-│   └── instructions/
-│       ├── terraform.instructions.md        # Instrucciones por contexto (Terraform)
-│       ├── kubernetes.instructions.md       # Instrucciones por contexto (K8s)
-│       └── aws.instructions.md              # Instrucciones por contexto (AWS)
-├── AGENTS.md                                # Leído por Codex Y por Copilot
-├── CLAUDE.md                                # Instrucciones específicas para Claude
-└── .codex/
-    └── config.toml                          # Configuración específica de Codex CLI
-```
-
-### Jerarquía de instrucciones en VSCode
-
-| Archivo | Quién lo lee | Propósito |
-|---------|-------------|-----------|
-| `.github/copilot-instructions.md` | Todos los modelos en Copilot | Instrucciones globales del proyecto |
-| `.github/instructions/*.instructions.md` | Todos los modelos en Copilot | Instrucciones por contexto/path |
-| `AGENTS.md` | Codex CLI + Copilot agents | Instrucciones para agentes |
-| `CLAUDE.md` | Solo Claude (en Copilot y CLI) | Instrucciones específicas para Claude |
-| `.codex/config.toml` | Solo Codex CLI | Configuración técnica de Codex |
-
-### Instrucciones por contexto con YAML frontmatter
-
-Los archivos `.instructions.md` permiten definir **a qué paths aplican**:
-
-```markdown
----
-# .github/instructions/terraform.instructions.md
-applyTo: "**/*.tf"
-excludeAgent: ["gemini"]
 ---
 
-# Instrucciones para archivos Terraform
+## Paso 3: Configurar MCPs en VSCode
 
-## Reglas
-- Siempre incluir tags obligatorios: Environment, Team, ManagedBy
-- Usar módulos internos de `modules/` antes de crear recursos directamente
-- Nunca hardcodear valores — usar variables con defaults seguros
-- Todo recurso debe tener un `description` en su variable
+Los MCPs se configuran en un archivo dentro de tu repositorio: `.vscode/mcp.json`. Este archivo **sí se versiona con Git** para que todo el equipo comparta las mismas conexiones.
 
-## Naming convention
-- Recursos: `{env}-{servicio}-{recurso}`
-- Variables: snake_case descriptivo
-- Outputs: `{recurso}_{atributo}`
+### Crear el archivo `.vscode/mcp.json`
+
+Si la carpeta `.vscode/` no existe en tu proyecto, créala:
+
+```bash
+mkdir -p .vscode
 ```
 
-```markdown
----
-# .github/instructions/aws.instructions.md
-applyTo: "scripts/aws/**"
----
-
-# Instrucciones para scripts AWS
-
-## Seguridad
-- Siempre verificar la cuenta activa antes de ejecutar
-- Usar `--dry-run` cuando esté disponible
-- Logs de operaciones van a `.codex/audit-logs/`
-- Nunca ejecutar en producción sin confirmación explícita
-```
-
-La propiedad `excludeAgent` permite excluir modelos específicos si alguna instrucción no aplica para cierto agente.
-
-## MCPs en VSCode: .vscode/mcp.json
-
-Los MCPs se configuran en `.vscode/mcp.json` y están disponibles para **todos los modelos** en Copilot:
+Luego crea el archivo `.vscode/mcp.json`:
 
 ```json
-// .vscode/mcp.json
 {
     "servers": {
         "github": {
@@ -137,134 +98,188 @@ Los MCPs se configuran en `.vscode/mcp.json` y están disponibles para **todos l
                 "AWS_PROFILE": "${AWS_PROFILE}",
                 "AWS_REGION": "${AWS_REGION}"
             }
-        },
-        "playwright": {
-            "command": "npx",
-            "args": ["-y", "@anthropic/mcp-server-playwright"]
         }
     }
 }
 ```
 
-> **Nota:** La key raíz es `"servers"` (no `"mcpServers"`). Este es un error común.
+> **Importante:** La clave raíz debe ser `"servers"` — no `"mcpServers"`. Este es un error muy común.
 
-### Agregar MCP servers desde la Command Palette
+> **Sobre las variables de entorno:** `${GITHUB_TOKEN}` toma el valor de la variable de entorno del sistema. No pongas el token directamente en el archivo.
 
-También puedes agregar servers desde la UI:
+### Agregar un MCP desde la Command Palette (alternativa)
 
-1. Abre la Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`)
-2. Busca: `MCP: Add Server`
-3. Selecciona el tipo (stdio, SSE)
-4. Configura el comando y argumentos
+1. `Cmd+Shift+P` → escribe `MCP: Add Server`
+2. Selecciona el tipo de transporte: `stdio` (la mayoría) o `SSE`
+3. Ingresa el comando (ej: `npx`) y los argumentos
+4. VSCode escribe la entrada en `.vscode/mcp.json` automáticamente
 
-### Descubrir MCPs desde Claude Desktop
+### Habilitar descubrimiento automático desde Claude Desktop
 
-Si usas Claude Desktop, puedes habilitar el descubrimiento automático de MCPs:
+Si usas Claude Desktop y ya tienes MCPs configurados allí, puedes hacer que VSCode los detecte automáticamente. Agrega esto a tu `settings.json` de usuario:
 
 ```json
-// settings.json de VSCode
 {
+    "github.copilot.chat.claudeAgent.enabled": true,
     "chat.mcp.discovery.enabled": true
 }
 ```
 
-Esto permite que VSCode detecte y reutilice los MCP servers que ya tienes configurados en Claude Desktop.
+---
 
-## Claude en VSCode: Consideraciones Específicas
+## Paso 4: Configurar el settings.json compartido del equipo
 
-### CLAUDE.md: Instrucciones solo para Claude
+Además del `settings.json` de usuario (personal, no se versiona), existe el `.vscode/settings.json` del proyecto, que **sí se versiona** y aplica a todos los miembros del equipo.
 
-Si necesitas instrucciones específicas para Claude (por su estilo de razonamiento diferente), usa `CLAUDE.md`:
+### Crear `.vscode/settings.json` del proyecto
 
-```markdown
-# CLAUDE.md — Instrucciones específicas para Claude
-
-## Razonamiento
-- Usa razonamiento paso a paso para operaciones de infraestructura
-- Antes de ejecutar, explica qué harás y por qué
-- Si hay ambigüedad, pregunta en vez de asumir
-
-## Formato de respuesta
-- Muestra los comandos que ejecutarás antes de hacerlo
-- Para Terraform, siempre muestra el diff esperado
-- Incluye el output relevante en tu respuesta
-
-## Seguridad (complementa a AGENTS.md)
-- Las mismas reglas de AGENTS.md aplican aquí
-- Adicionalmente: para operaciones complejas, desglosa en pasos
-  y confirma cada paso antes de continuar
+```bash
+# En la raíz del repositorio
+touch .vscode/settings.json
 ```
 
-### El comando `/delegate`
-
-Desde Copilot Chat puedes delegar tareas a agentes específicos:
-
-```
-/delegate @codex "ejecuta terraform plan y muéstrame el resumen"
-/delegate @claude "revisa este security group y dime si hay riesgos"
-```
-
-Esto es útil para aprovechar las fortalezas de cada modelo: Codex para ejecución de comandos, Claude para análisis y revisión.
-
-## Configuración Recomendada para el Equipo
-
-### settings.json compartido del equipo
+Contenido recomendado para equipos DevOps-SRE:
 
 ```json
-// .vscode/settings.json (versionado con el repo)
 {
     "github.copilot.chat.claudeAgent.enabled": true,
     "chat.mcp.discovery.enabled": true,
+
     "github.copilot.chat.codeGeneration.instructions": [
         { "file": ".github/copilot-instructions.md" }
-    ]
+    ],
+
+    "editor.formatOnSave": true,
+    "editor.rulers": [120],
+
+    "files.associations": {
+        "*.tf": "terraform",
+        "*.tfvars": "terraform",
+        "*.hcl": "hcl",
+        "Dockerfile*": "dockerfile"
+    },
+
+    "files.exclude": {
+        "**/.terraform": true,
+        "**/tfplan": true,
+        "**/.codex/audit-logs": true
+    }
 }
 ```
 
-### Estructura completa recomendada
+---
+
+## Paso 5: Configurar instrucciones de Copilot para todo el equipo
+
+Crea el archivo `.github/copilot-instructions.md` en la raíz del repo. Este archivo es **leído por todos los modelos** (Codex, Claude, Gemini) cuando se usan desde Copilot en VSCode.
+
+```bash
+mkdir -p .github
+```
+
+Ejemplo para un equipo DevOps-SRE:
+
+```markdown
+# Instrucciones para GitHub Copilot — Equipo DevOps-SRE
+
+## Idioma
+Responde siempre en español.
+
+## Contexto
+Somos un equipo DevOps-SRE trabajando con AWS, Terraform y EKS.
+
+## Reglas
+- Nunca sugieras comandos destructivos sin advertencia explícita
+- Siempre incluye `--dry-run` cuando el comando lo soporte
+- Usa Conventional Commits en español para mensajes de commit
+- Incluye siempre tags AWS en recursos Terraform: Environment, Team, ManagedBy
+```
+
+---
+
+## Paso 6: Instrucciones por contexto de archivo
+
+Para reglas que solo aplican a ciertos tipos de archivos, usa `.github/instructions/`:
+
+```bash
+mkdir -p .github/instructions
+```
+
+Ejemplo para archivos Terraform:
+
+```markdown
+---
+# .github/instructions/terraform.instructions.md
+applyTo: "**/*.tf"
+---
+
+Al trabajar con archivos Terraform:
+- Siempre valida con `terraform plan` antes de sugerir `apply`
+- Incluye tags obligatorios: Environment, Team, ManagedBy
+- Usa módulos del directorio `modules/` cuando existan
+- Sigue la convención de nombres: `{env}-{servicio}-{recurso}`
+```
+
+La propiedad `applyTo` hace que estas instrucciones se activen automáticamente **solo cuando estás editando archivos `.tf`**, sin afectar al resto del proyecto.
+
+---
+
+## Paso 7: Seleccionar modelo en el chat
+
+Con todo configurado, cambiar de modelo es inmediato:
+
+1. Abre Copilot Chat: `Cmd+Ctrl+I` / `Ctrl+Alt+I`
+2. Haz clic en el selector de modelo (ícono ⚙️ o el nombre del modelo actual)
+3. Selecciona el modelo que quieras usar
 
 ```
-tu-proyecto/
-├── .github/
-│   ├── copilot-instructions.md           # Instrucciones para todos los modelos en Copilot
-│   └── instructions/
-│       ├── terraform.instructions.md     # Contexto: archivos .tf
-│       ├── kubernetes.instructions.md    # Contexto: archivos K8s
-│       └── aws.instructions.md           # Contexto: scripts AWS
-├── .vscode/
-│   ├── settings.json                     # Config compartida del equipo
-│   └── mcp.json                          # MCPs accesibles desde VSCode
-├── AGENTS.md                             # Para Codex CLI + Copilot agents
-├── AGENTS.override.md                    # Reglas inamovibles (Codex)
-├── CLAUDE.md                             # Instrucciones específicas Claude
-├── .codex/
-│   ├── config.toml                       # Config de Codex CLI
-│   ├── hooks.json                        # Hooks (solo Codex CLI)
-│   └── hooks/
-│       └── safety-check.sh
-├── skills/                               # Skills para Codex
-│   └── .../SKILL.md
-└── agents/
-    └── openai.yaml                       # Registro de skills
+┌──────────────────────────────────────────────┐
+│  Copilot Chat                                │
+│                                              │
+│  ┌──────────────────────────────────────┐    │
+│  │ ¿Cómo puedo ayudarte?               │    │
+│  │                          [⚙ Codex ▼] │    │  ← Click aquí
+│  └──────────────────────────────────────┘    │
+│                                              │
+│  Modelos disponibles:                        │
+│  ✓ GPT-5.3-Codex                            │
+│  ○ Claude Sonnet 4.6                        │
+│  ○ Claude Opus 4.6                          │
+│  ○ Gemini                                   │
+└──────────────────────────────────────────────┘
 ```
+
+---
 
 ## Cuándo usar cada modelo
 
 | Tarea | Modelo recomendado | Por qué |
 |-------|-------------------|---------|
-| Ejecutar comandos y modificar archivos | Codex (CLI o Copilot) | Sandbox nativo, hooks, approval system |
-| Revisión de código y análisis de seguridad | Claude Sonnet 4.6 | Excelente razonamiento sobre código |
-| Arquitectura y decisiones complejas | Claude Opus 4.6 | Máxima capacidad de razonamiento |
+| Ejecutar comandos y modificar archivos | Codex | Sandbox nativo, hooks, approval system |
+| Revisión y análisis de código | Claude Sonnet 4.6 | Razonamiento rápido y preciso |
+| Decisiones de arquitectura complejas | Claude Opus 4.6 | Máxima profundidad de razonamiento |
+| Troubleshooting largo y profundo | Claude Opus 4.6 | Mantiene el hilo en problemas complejos |
 | Refactoring rápido | Codex / Claude Sonnet | Ambos son rápidos y precisos |
-| Investigación y troubleshooting | Claude Opus 4.6 | Razonamiento profundo y metódico |
 
-## Puntos clave
+---
 
-1. **Un gobierno, múltiples modelos**: `.github/copilot-instructions.md` y `AGENTS.md` aplican a todos
-2. **MCPs compartidos** vía `.vscode/mcp.json` — cualquier modelo puede usar las mismas herramientas
-3. **`CLAUDE.md`** para instrucciones específicas de Claude, sin afectar a Codex
-4. **Instrucciones por contexto** (`.instructions.md`) para reglas que solo aplican a ciertos archivos
-5. Hooks de Codex CLI **no aplican en Copilot** — por eso las instrucciones en archivos son la capa de gobierno universal
+## Resumen: Archivos del equipo en VSCode
+
+```
+tu-proyecto/
+├── .github/
+│   ├── copilot-instructions.md           # Instrucciones globales (todos los modelos)
+│   └── instructions/
+│       └── terraform.instructions.md    # Instrucciones solo para archivos .tf
+├── .vscode/
+│   ├── settings.json                     # Config compartida del equipo (versionar)
+│   └── mcp.json                          # MCPs disponibles en VSCode (versionar)
+├── AGENTS.md                             # Para Codex CLI + Copilot agents
+├── AGENTS.override.md                    # Reglas inamovibles
+└── CLAUDE.md                             # Instrucciones específicas para Claude
+```
+
+> **Nota:** Los hooks de Codex CLI **no aplican** cuando usas Claude o Codex desde Copilot en VSCode — solo funcionan en el CLI. Por eso las instrucciones en `.github/copilot-instructions.md` y `AGENTS.md` son la capa de gobierno universal para el IDE.
 
 ---
 

@@ -9,40 +9,61 @@ description: Runbook de respuesta a incidentes en AWS. Guía el diagnóstico, re
 Cuando el usuario reporte un incidente, una alerta, o pida
 investigar un problema en los servicios AWS.
 
-## Procedimiento
+## Archivos disponibles
 
-### Fase 1: Triage (2 min)
-Recopilar:
-1. Qué servicio está afectado
-2. Hay impacto a usuarios finales (sí/no)
-3. Desde cuándo ocurre
-4. Qué cambios recientes se hicieron
-
-```bash
-# Estado general de salud AWS
-aws health describe-events --filter "eventStatusCodes=open"
-
-# Alarmas activas
-aws cloudwatch describe-alarms --state-value ALARM --output table
+```
+skills/incident-response/
+├── SKILL.md                    # Este archivo
+├── scripts/
+│   └── triage.sh               # Script de triage multi-servicio
+└── templates/
+    └── post-mortem.md          # Plantilla de post-mortem
 ```
 
-### Fase 2: Diagnóstico (5-10 min)
+## Procedimiento
+
+### Fase 1: Triage rápido (2 min)
+
+Antes de cualquier diagnóstico, recopilar:
+1. ¿Qué servicio está afectado?
+2. ¿Hay impacto a usuarios finales?
+3. ¿Desde cuándo ocurre?
+4. ¿Qué cambios recientes se realizaron?
+
+Ejecutar el script de triage para obtener un panorama general:
+
+```bash
+# Triage general (CloudWatch alarms + AWS Health)
+bash skills/incident-response/scripts/triage.sh
+
+# Triage de un servicio específico
+bash skills/incident-response/scripts/triage.sh --service eks
+bash skills/incident-response/scripts/triage.sh --service rds
+bash skills/incident-response/scripts/triage.sh --service lambda --name mi-funcion
+bash skills/incident-response/scripts/triage.sh --service ec2
+
+# Triage completo de todos los servicios con reporte
+bash skills/incident-response/scripts/triage.sh --all \
+  --output /tmp/triage-$(date +%Y%m%d-%H%M).md
+```
+
+### Fase 2: Diagnóstico profundo (5–10 min)
+
+Según el servicio afectado identificado en el triage:
 
 **EKS / Kubernetes:**
 ```bash
 kubectl get pods --all-namespaces | grep -v Running
 kubectl get events --sort-by='.lastTimestamp' | tail -20
-kubectl top nodes
-kubectl top pods --all-namespaces --sort-by=memory | head -20
+kubectl describe pod <pod-problemático> -n <namespace>
+kubectl logs <pod> -n <namespace> --previous   # Logs del contenedor anterior
 ```
 
 **RDS:**
 ```bash
 aws rds describe-events --duration 60
-aws cloudwatch get-metric-statistics --namespace AWS/RDS \
-  --metric-name CPUUtilization --period 300 --statistics Average \
-  --start-time $(date -u -d '1 hour ago' +%Y-%m-%dT%H:%M:%S) \
-  --end-time $(date -u +%Y-%m-%dT%H:%M:%S)
+aws rds describe-db-instances \
+  --query 'DBInstances[].{ID:DBInstanceIdentifier,Status:DBInstanceStatus}'
 ```
 
 **Lambda:**
@@ -53,47 +74,47 @@ aws logs filter-log-events \
   --filter-pattern "ERROR"
 ```
 
-**EC2 / General:**
+**EC2:**
 ```bash
-aws ec2 describe-instance-status --filters "Name=instance-status.status,Values=impaired"
-aws ec2 describe-instances --filters "Name=instance-state-name,Values=stopped" \
-  --query 'Reservations[].Instances[].{ID:InstanceId,Name:Tags[?Key==`Name`].Value|[0]}'
+aws ec2 describe-instance-status \
+  --filters "Name=instance-status.status,Values=impaired"
 ```
 
 ### Fase 3: Mitigación
-- Proponer la acción MENOS invasiva primero
-- SIEMPRE confirmar con el usuario antes de ejecutar cualquier mitigación
+
+- Proponer siempre la acción **menos invasiva** primero
+- **SIEMPRE** confirmar con el usuario antes de ejecutar cualquier mitigación
 - Documentar cada acción tomada con timestamp
-- Si se requiere rollback, verificar la versión anterior antes de proceder
+- Si se requiere rollback, verificar el estado anterior antes de proceder
+- Preferir rollback sobre fixes ad-hoc cuando sea posible
 
 ### Fase 4: Documentación Post-Mortem
-Generar documento con:
-```markdown
-## Post-Mortem: [Título del incidente]
-**Fecha:** [fecha]
-**Duración:** [inicio] - [resolución]
-**Impacto:** [descripción del impacto]
-**Severidad:** SEV-[1-4]
 
-### Timeline
-- [HH:MM] Alerta disparada
-- [HH:MM] Equipo notificado
-- [HH:MM] Diagnóstico completado
-- [HH:MM] Mitigación aplicada
-- [HH:MM] Servicio restaurado
+Una vez resuelto el incidente, generar el post-mortem usando la plantilla:
 
-### Causa Raíz
-[Descripción]
-
-### Acciones Tomadas
-1. [Acción + resultado]
-
-### Items de Seguimiento
-- [ ] [Acción preventiva]
+```bash
+cp skills/incident-response/templates/post-mortem.md \
+   docs/post-mortems/$(date +%Y-%m-%d)-titulo-incidente.md
 ```
 
+Completar la plantilla con:
+- Timeline detallado de eventos
+- Causa raíz (usar los 5 Por Qué)
+- Acciones tomadas y su resultado
+- Items de seguimiento con responsable y fecha
+
+## Clasificación de Severidad
+
+| SEV | Criterio | Tiempo de respuesta |
+|-----|----------|---------------------|
+| SEV-1 | Servicio de producción completamente caído | Inmediato |
+| SEV-2 | Degradación severa en producción | 15 minutos |
+| SEV-3 | Impacto parcial o en staging | 1 hora |
+| SEV-4 | Problema menor, sin impacto inmediato | Próximo día hábil |
+
 ## Restricciones
-- NUNCA reiniciar servicios de producción sin confirmación
-- PRIORIZAR recolección de evidencia ANTES de la mitigación
+- **NUNCA** reiniciar servicios de producción sin confirmación del usuario
+- **PRIORIZAR** la recolección de evidencia antes de la mitigación
 - No eliminar logs ni evidencia durante la investigación
-- Si el incidente es SEV-1 o SEV-2, sugerir escalar inmediatamente
+- SEV-1 y SEV-2 requieren escalar al equipo inmediatamente
+- Toda acción de mitigación debe quedar documentada con timestamp

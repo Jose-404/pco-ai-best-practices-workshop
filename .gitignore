@@ -1,0 +1,169 @@
+# ============================================================
+# .gitignore — pco-ai-best-practices-workshop
+# ============================================================
+
+# ── macOS ────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
+# ── Secretos y credenciales ──────────────────────────────────
+# NUNCA deben llegar al repo
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+*.pub
+credentials
+.aws/credentials
+
+# ── Terraform ────────────────────────────────────────────────
+**/.terraform/
+**/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+tfplan
+tfplan.json
+*.tfvars
+!*.tfvars.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+crash.log
+crash.*.log
+
+# ── Audit logs (generados por los hooks en runtime) ──────────
+.codex/audit-logs/
+audit-logs/
+
+# ── Reportes generados en runtime ───────────────────────────
+/tmp/
+*-report-*.md
+*-triage-*.md
+
+# ── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.env/
+dist/
+build/
+*.egg-info/
+.eggs/
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# ── Node.js ──────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.node_repl_history
+*.tgz
+.pnp.*
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+dist/
+.next/
+out/
+
+# ── Go ──────────────────────────────────────────────────────
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+go.sum.bak
+
+# ── IDEs y editores ──────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/extensions.json   # extensiones personales, no compartir
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Sí compartir (configuración del equipo):
+# .vscode/settings.json   ← versionar
+# .vscode/mcp.json        ← versionar
+
+# ── Kubernetes ───────────────────────────────────────────────
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+kube-config
+
+# ── Docker ──────────────────────────────────────────────────
+.dockerignore
+docker-compose.override.yml
+
+# ── Logs generales ──────────────────────────────────────────
+*.log
+*.log.*
+logs/
+log/
+
+# ── Archivos de backup y temporales ─────────────────────────
+*.bak
+*.tmp
+*.temp
+*.orig
+*.rej
+*~
+\#*\#
+
+# ── Archivos de sistema ──────────────────────────────────────
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ── Binarios y archivos compilados ──────────────────────────
+*.o
+*.a
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
